@@ -22,6 +22,15 @@ class LoginController extends Controller
     use AuthenticatesUsers;
 
     /**
+     * rewriting to change email to chat_name for login
+     * @return string
+     */
+    public function username()
+    {
+        return 'chat_name';
+    }
+
+    /**
      * Where to redirect users after login.
      *
      * @var string

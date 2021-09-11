@@ -37,7 +37,7 @@ class ChatController extends Controller
     public function sendMessage(MessageRequest $request)
     {
         try {
-            if(Request::ajax()){
+            if (Request::ajax()) {
                 DB::beginTransaction();
                 $user = User::find(Auth::user()->id);
                 $room = Room::whereCode($request->input('room_code'))->first();
@@ -48,11 +48,10 @@ class ChatController extends Controller
                 broadcast(new MessageSent($user, $message, $request->input('room_code')))->toOthers();
                 DB::commit();
                 return response(['status' => 'Message Sent!']);
-            }else{
+            } else {
                 Log::info('request was not a ajax');
             }
-        }
-        catch (\Exception $exception){
+        } catch (\Exception $exception) {
             DB::rollBack();
             Log::info($exception);
             return response(['status' => 'Message Not Sent!']);
@@ -65,9 +64,8 @@ class ChatController extends Controller
             $room = Room::find(simple_two_way_crypt($room, 'd'));
             $generalRooms = Room::general()->get();
             $messages = $room->load('messages');
-            return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room->code]);
-        }
-        catch (\Exception $exception){
+            return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room->code, 'room_name' => $room->name]);
+        } catch (\Exception $exception) {
             Log::info($exception);
             return redirect()->back();
         }
@@ -80,9 +78,8 @@ class ChatController extends Controller
             $privateRoom = Room::firstOrCreate(['code' => $room], ['name' => null, 'type' => 0]);
             $generalRooms = Room::general()->get();
             $messages = $privateRoom->load('messages');
-            return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room]);
-        }
-        catch (\Exception $exception){
+            return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room, 'room_name' => 'private']);
+        } catch (\Exception $exception) {
             Log::info($exception);
             return redirect()->back();
         }
@@ -90,9 +87,35 @@ class ChatController extends Controller
 
     public function search(\Illuminate\Http\Request $request)
     {
-        if(Request::ajax())
-        {
-            return $request->all();
+        try {
+            if (Request::ajax()) {
+                $query = $request->input('query');
+
+                $users = User::where('chat_name', 'like', '%' . $query . '%')->get(['id', 'chat_name']);
+                $mapped_users = collect($users)->map(function ($item) {
+                    return [
+                        'name' => $item->chat_name,
+                        'link' => route('room.private', ['room' => createPrivateRoomCode($item->id)]),
+                        'type' => 'user'
+                    ];
+                })->toArray();
+
+                $rooms = Room::general()->where('name', 'like', '%' . $query . '%')->get(['name', 'code']);
+                $mapped_rooms = collect($rooms)->map(function ($item) {
+                    return [
+                        'name' => $item->name,
+                        'link' => route('room.private', ['room' => $item->code]),
+                        'type' => 'room'
+                    ];
+                })->toArray();
+
+                return array_merge($mapped_users, $mapped_rooms);
+
+            } else {
+                Log::info('that was not a ajax request');
+            }
+        } catch (\Exception $exception) {
+            Log::info($exception);
         }
     }
 

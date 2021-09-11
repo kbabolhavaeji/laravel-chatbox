@@ -27,7 +27,7 @@
 
         let channel = pusher.subscribe('codeex-chat');
         channel.bind('MessageSent', function(data) {
-            console.log(JSON.stringify(data));
+            //console.log(JSON.stringify(data));
             if(data.room_code == "{{ $room_code ?? '' }}" ){
                 $('#chatbox').append('<label data-message-id="'+data.message.id+'"><strong>'+data.user.chat_name+' : </strong></label> <span>'+data.message.message+'</span><br/>');
                 $("#panel-body").animate({
