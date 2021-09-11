@@ -29,9 +29,15 @@ class ChatController extends Controller
         return view('index', compact('generalRooms'));
     }
 
-    public function fetchMessages()
+    public function fetchMessages(\Illuminate\Http\Request $request)
     {
-        return Message::with('user')->get();
+        try {
+            $room = Room::find(simple_two_way_crypt($request->input('room_code'), 'd'));
+            $messages = $room->setRelation('messages', $room->messages()->latest()->where('id', '<', $request->input('query'))->with('user')->orderBy('id', 'DESC')->take(15)->get());
+            return $messages;
+        }catch (\Exception $exception){
+
+        }
     }
 
     public function sendMessage(MessageRequest $request)
@@ -58,12 +64,13 @@ class ChatController extends Controller
         }
     }
 
+    # I know what is "route model binding" but this time it would not help :)
     public function publicChat($room)
     {
         try {
             $room = Room::find(simple_two_way_crypt($room, 'd'));
             $generalRooms = Room::general()->get();
-            $messages = $room->load('messages');
+            $messages = $room->setRelation('messages', $room->messages()->latest()->take(15)->get());
             return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room->code, 'room_name' => $room->name]);
         } catch (\Exception $exception) {
             Log::info($exception);
@@ -72,6 +79,7 @@ class ChatController extends Controller
 
     }
 
+    # I know what is "route model binding" but this time it would not help :)
     public function privateChat($room)
     {
         try {

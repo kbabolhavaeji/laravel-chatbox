@@ -33,7 +33,7 @@
                 $("#panel-body").animate({
                     scrollTop: $(
                         '#panel-body').get(0).scrollHeight
-                }, 2000)
+                }, 1000)
             }
         });
     </script>
