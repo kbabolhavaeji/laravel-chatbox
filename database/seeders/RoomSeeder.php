@@ -15,11 +15,13 @@ class RoomSeeder extends Seeder
     public function run()
     {
         Room::create([
-            'name' => 'general'
+            'name' => 'general',
+            'code' => simple_two_way_crypt(1)
         ]);
 
         Room::create([
-            'name' => 'others'
+            'name' => 'others',
+            'code' => simple_two_way_crypt(2)
         ]);
     }
 }

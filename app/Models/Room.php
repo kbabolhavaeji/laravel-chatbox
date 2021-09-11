@@ -9,6 +9,8 @@ class Room extends Model
 {
     use HasFactory;
 
+    protected $fillable = ['code', 'name', 'type'];
+
     public function scopeGeneral($query)
     {
         return $query->where('type', 1);

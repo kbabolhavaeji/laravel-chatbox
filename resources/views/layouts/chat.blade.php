@@ -21,15 +21,14 @@
     <script src = "https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
     <script>
-        //Pusher.logToConsole = true;
         let pusher = new Pusher('7f9bbd5355f2934ec063', {
             cluster: 'ap1'
         });
 
         let channel = pusher.subscribe('codeex-chat');
         channel.bind('MessageSent', function(data) {
-            if(data.message.room_id == {{ $messages->id ?? '' }}){
-                console.log(JSON.stringify(data));
+            console.log(JSON.stringify(data));
+            if(data.room_code == "{{ $room_code ?? '' }}" ){
                 $('#chatbox').append('<label data-message-id="'+data.message.id+'"><strong>'+data.user.chat_name+' : </strong></label> <span>'+data.message.message+'</span><br/>');
                 $("#panel-body").animate({
                     scrollTop: $(
@@ -56,6 +55,37 @@
                     <!-- Right Side Of Navbar -->
                     <ul class="navbar-nav ml-auto">
                         <!-- Authentication Links -->
+                        @guest
+                            @if (Route::has('login'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('login') }}">{{ __('Login') }}</a>
+                                </li>
+                            @endif
+
+                            @if (Route::has('register'))
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('register') }}">{{ __('Register') }}</a>
+                                </li>
+                            @endif
+                        @else
+                            <li class="nav-item dropdown">
+                                <a id="navbarDropdown" class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                                    {{ Auth::user()->name }}
+                                </a>
+
+                                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                                    <a class="dropdown-item" href="{{ route('logout') }}"
+                                       onclick="event.preventDefault();
+                                                     document.getElementById('logout-form').submit();">
+                                        {{ __('Logout') }}
+                                    </a>
+
+                                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                                        @csrf
+                                    </form>
+                                </div>
+                            </li>
+                        @endguest
                     </ul>
                 </div>
             </div>
@@ -65,5 +95,6 @@
             @yield('content')
         </main>
     </div>
+    @yield('custom-js')
 </body>
 </html>

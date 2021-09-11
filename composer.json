@@ -13,7 +13,8 @@
         "laravel/tinker": "^2.5",
         "laravel/ui": "^3.3",
         "pusher/pusher-php-server": "^7.0",
-      "ext-http": "*"
+      "ext-http": "*",
+        "ext-openssl": "*"
     },
     "require-dev": {
         "facade/ignition": "^2.5",
@@ -28,7 +29,10 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "files": [
+            "app/Helpers/helper.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

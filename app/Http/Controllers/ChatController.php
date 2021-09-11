@@ -3,21 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Events\MessageSent;
+use App\Http\Requests\MessageRequest;
 use App\Models\Message;
 use App\Models\Room;
 use App\Models\User;
-use http\Client\Response;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Request;
 
 class ChatController extends Controller
 {
 
     //@todo implement services and repositories
-    //@todo build up queues
-    //@todo implement gate and policies
+    //@todo build up queues or rabbitMQ
 
     public function __construct()
     {
@@ -26,8 +25,8 @@ class ChatController extends Controller
 
     public function index()
     {
-        $rooms = Room::general()->get();
-        return view('index', compact('rooms'));
+        $generalRooms = Room::general()->get();
+        return view('index', compact('generalRooms'));
     }
 
     public function fetchMessages()
@@ -35,38 +34,66 @@ class ChatController extends Controller
         return Message::with('user')->get();
     }
 
-    public function sendMessage(Request $request)
+    public function sendMessage(MessageRequest $request)
     {
         try {
-
-            DB::beginTransaction();
-            $user = User::find(Auth::user()->id);
-            $message = $user->messages()->create([
-                'message' => $request->input('message'),
-                'room_id' => $request->input('room_id')
-            ]);
-            broadcast(new MessageSent($user, $message))->toOthers();
-            DB::commit();
-            return response(['status' => 'Message Sent!']);
+            if(Request::ajax()){
+                DB::beginTransaction();
+                $user = User::find(Auth::user()->id);
+                $room = Room::whereCode($request->input('room_code'))->first();
+                $message = $user->messages()->create([
+                    'message' => $request->input('message'),
+                    'room_id' => $room->id,
+                ]);
+                broadcast(new MessageSent($user, $message, $request->input('room_code')))->toOthers();
+                DB::commit();
+                return response(['status' => 'Message Sent!']);
+            }else{
+                Log::info('request was not a ajax');
+            }
         }
         catch (\Exception $exception){
             DB::rollBack();
             Log::info($exception);
             return response(['status' => 'Message Not Sent!']);
         }
+    }
+
+    public function publicChat($room)
+    {
+        try {
+            $room = Room::find(simple_two_way_crypt($room, 'd'));
+            $generalRooms = Room::general()->get();
+            $messages = $room->load('messages');
+            return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room->code]);
+        }
+        catch (\Exception $exception){
+            Log::info($exception);
+            return redirect()->back();
+        }
 
     }
 
-    public function loadRoom(Room $room)
+    public function privateChat($room)
     {
-        $rooms = Room::general()->get();
-        $messages = $room->load('messages');
-        return view('chatbox', ['rooms' => $rooms, 'messages' => $messages, 'room_id' => $room->id]);
+        try {
+            $privateRoom = Room::firstOrCreate(['code' => $room], ['name' => null, 'type' => 0]);
+            $generalRooms = Room::general()->get();
+            $messages = $privateRoom->load('messages');
+            return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room]);
+        }
+        catch (\Exception $exception){
+            Log::info($exception);
+            return redirect()->back();
+        }
     }
 
-    public function privateChat(User $user)
+    public function search(\Illuminate\Http\Request $request)
     {
-        $room = DB::table('room_user')->where('room_id', );
+        if(Request::ajax())
+        {
+            return $request->all();
+        }
     }
 
 }

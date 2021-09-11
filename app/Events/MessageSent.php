@@ -29,14 +29,23 @@ class MessageSent implements ShouldBroadcast
     public $message;
 
     /**
+     *
+     * Room code
+     *
+     * @var
+     */
+    public $room_code;
+
+    /**
      * Create a new event instance.
      *
      * @return void
      */
-    public function __construct(User $user, Message $message)
+    public function __construct(User $user, Message $message, String $room_code)
     {
         $this->user = $user;
         $this->message = $message;
+        $this->room_code = $room_code;
     }
 
     /**

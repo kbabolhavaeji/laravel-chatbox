@@ -20,7 +20,7 @@
                                     @if(isset($rooms))
                                         <ul>
                                             @foreach($rooms as $room)
-                                                <li><a href="{{ route('chat.room', ['room'=>$room->id]) }}">{{ $room->name }}</a></li>
+                                                <li><a href="{{ route('room.public', ['room' => $room->code]) }}">{{ $room->name }}</a></li>
                                             @endforeach
                                         </ul>
                                     @endif
@@ -55,29 +55,25 @@
         </div>
     </div>
 </div>
+@endsection
 
-<script type="text/javascript">
-
-    $('#panel-body').scrollTop($($('#panel-body')).height());
-
-    $("#submit").click(function(e){
-
-        let message = $("#message").val();
-        $("#message").val('');
-        if(! message.length > 0){
-            return;
-        }
-
-        $.ajax({
-            type:'POST',
-            url:"{{ route('send') }}",
-            data:{message:message, room_id:{{ $messages->id }}, _token: '{{csrf_token()}}'},
-            success:function(data){
-                //console.log(data);
+@section('custom-js')
+    <script type="text/javascript">
+        $('#panel-body').scrollTop($($('#panel-body')).height());
+        $("#submit").click(function(e){
+            let message = $("#message").val();
+            $("#message").val('');
+            if(! message.length > 0){
+                return;
             }
+            $.ajax({
+                type:'POST',
+                url:"{{ route('send') }}",
+                data:{message:message, room_code:"{{ $room_code }}", _token: '{{ csrf_token() }}'},
+                success:function(data){
+                    console.log(data);
+                }
+            });
         });
-    });
-
-</script>
-
+    </script>
 @endsection

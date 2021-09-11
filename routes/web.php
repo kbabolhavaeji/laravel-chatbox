@@ -20,5 +20,6 @@ Auth::routes();
 Route::get('/', [ChatController::class,'index'])->name('show');
 Route::post('/send', [ChatController::class, 'sendMessage'])->name('send');
 Route::get('/receive', [ChatController::class, 'fetchMessages'])->name('receive');
-Route::get('/public/{room}', [ChatController::class, 'loadRoom'])->name('chat.room');
-Route::get('/private/{user}', [ChatController::class, 'privateChat'])->name('private.room');
+Route::get('/public/{room}', [ChatController::class, 'publicChat'])->name('room.public');
+Route::get('/private/{room}', [ChatController::class, 'privateChat'])->name('room.private');
+Route::post('/search', [ChatController::class, 'search'])->name('search');

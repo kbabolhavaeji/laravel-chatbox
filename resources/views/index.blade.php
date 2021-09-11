@@ -10,17 +10,20 @@
                     <div class="row">
                         <div class="col-sm-12">
                             <div class="input-group">
-                                <input type="text" name="message" class="form-control" placeholder="Search ..."/>
+                                <input type="text" name="searchbox" id="searchbox" class="form-control" placeholder="Search ..."/>
+                            </div>
+                            <div class="col-sm-12" id="search_results" style="border:1px solid #ced4da; margin-top: 2px; border-radius: 5px; z-index: 100; position: absolute; width: 90%; background: #ffffff; visibility: hidden;">
+                                <p>ssss</p>
                             </div>
                         </div>
                         <div class="col-sm-12">
                             <ul style="margin-top: 20px; list-style-type: none;">
                                 <li><b>Public Rooms</b></li>
                                 <li>
-                                    @if(isset($rooms))
+                                    @if(isset($generalRooms))
                                         <ul>
-                                            @foreach($rooms as $room)
-                                                <li><a href="{{ route('chat.room', ['room'=>$room->id]) }}">{{ $room->name }}</a></li>
+                                            @foreach($generalRooms as $room)
+                                                <li><a href="{{ route('room.public', ['room' => $room->code]) }}">{{ $room->name }}</a></li>
                                             @endforeach
                                         </ul>
                                     @endif
@@ -32,7 +35,7 @@
                                 <li><b>Users</b></li>
                                 <li>
                                     <ul>
-                                        <li><a href="{{ route('private.room', ['user'=> 2 ]) }}"> user 2 </a></li>
+                                        <li><a href="{{ route('room.private', ['room' => createPrivateRoomCode(2) ]) }}"> Nilloooo </a></li>
                                     </ul>
                                 </li>
                             </ul>
@@ -44,33 +47,32 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">dashboard</div>
-                <div class="card-body">
+                <div class="card-body" style="min-height: 400px;">
                 </div>
             </div>
         </div>
     </div>
 </div>
+@endsection
 
-<script type="text/javascript">
-
-    $("#submit").click(function(e){
-
-        let message = $("#message").val();
-        $("#message").val('');
-        if(! message.length > 0){
-            return;
-        }
-
-        $.ajax({
-            type:'POST',
-            url:"{{ route('send') }}",
-            data:{message:message, room_id:1, _token: '{{csrf_token()}}'},
-            success:function(data){
-                console.log(data);
+@section('custom-js')
+    <script type="text/javascript">
+        $('#searchbox').keyup(function (){
+            //search_results
+            let query = $('#searchbox').val();
+            if(query.length > 0){
+                $.ajax({
+                    type:'POST',
+                    url:"{{ route('search') }}",
+                    data:{query:query, _token: '{{ csrf_token() }}'},
+                    success:function(data){
+                        console.log(data);
+                    }
+                });
+                $('#search_results').css('visibility', 'visible');
+            }else{
+                $('#search_results').css('visibility', 'hidden');
             }
         });
-    });
-
-</script>
-
+    </script>
 @endsection
