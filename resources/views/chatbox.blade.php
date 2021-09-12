@@ -38,9 +38,8 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-sm-12 panel-body" id="panel-body" style="height: 400px; min-height: 400px; overflow: scroll; overflow-x: hidden; margin-bottom: 20px; border-bottom-color: #b2b2b2;">
+                            <p align="center" id="loadMessagesText"><label style="color: #3f9ae5; cursor: pointer;" id="loadMessages" data-last-message-id="{{ $messages->messages->reverse()->first()->id ?? '' }}">load previouse messages</label></p>
                             <div id="chatbox">
-                                <p align="center" id="loadMessagesText"><label style="color: #3f9ae5; cursor: pointer;" id="loadMessages" >load previouse messages</label></p>
-                                {{--@dump($messages->messages->reverse()->first()->id)--}}
                                 @foreach($messages->messages->reverse() as $message)
                                     <label data-message-id="{{ $message->id }}"><strong>{{ $message->load('user')->user->chat_name }} : </strong></label> <span>{{ $message->message }}</span><br/>
                                 @endforeach
@@ -103,18 +102,22 @@
             }
         });
 
-        $('#loadMessages').click(function(){
+        $('#loadMessages').on('click', function(){
+            let query = $('#loadMessages').data('last-message-id');
             $.ajax({
                 type:'POST',
                 url:"{{ route('receive') }}",
-                data:{ room_code:"{{ $room_code }}", query: "{{ $messages->messages->reverse()->first()->id ?? '' }}", _token: '{{ csrf_token() }}'},
+                data:{ room_code:"{{ $room_code }}", query: query, _token: '{{ csrf_token() }}'},
                 success:function(data){
                     if(data.messages.length > 0){
                         $.each(data.messages, function (index, value){
                             $('#chatbox').prepend('<label data-message-id="'+value.id+'"><strong>'+value.user.chat_name+' : </strong></label> <span> '+value.message+' </span><br/>');
+                            if (index === (data.messages.length - 1)) {
+                                $('#loadMessages').data('last-message-id', value.id );
+                            }
                         });
-                        $('#loadMessagesText').remove();
-                        $('#chatbox').prepend('<p align="center" id="loadMessagesText"><label style="color: #3f9ae5; cursor: pointer;" id="loadMessages" >load previouse messages</label></p>');
+                    }else{
+                        $('#loadMessages').css('visibility', 'hidden');
                     }
                 }
             });

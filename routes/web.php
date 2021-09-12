@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 Auth::routes();
-
 Route::get('/', [ChatController::class,'index'])->name('show');
 Route::post('/send', [ChatController::class, 'sendMessage'])->name('send');
 Route::post('/receive', [ChatController::class, 'fetchMessages'])->name('receive');
