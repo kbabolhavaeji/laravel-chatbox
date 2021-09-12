@@ -11,6 +11,10 @@ class Room extends Model
 
     protected $fillable = ['code', 'name', 'type'];
 
+    public function getRouteKeyName(){
+        return 'code';
+    }
+
     public function scopeGeneral($query)
     {
         return $query->where('type', 1);

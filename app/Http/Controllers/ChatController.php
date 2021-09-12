@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\MessageSent;
 use App\Http\Requests\MessageRequest;
-use App\Models\Message;
+use App\Http\Services\ChatService;
 use App\Models\Room;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
+use Exception;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Routing\ResponseFactory;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
@@ -15,116 +19,111 @@ use Illuminate\Support\Facades\Request;
 class ChatController extends Controller
 {
 
-    //@todo implement services and repositories
-    //@todo build up queues or rabbitMQ
+    protected $chatService;
 
-    public function __construct()
+    public function __construct(ChatService $chatService)
     {
         $this->middleware('auth');
+        $this->chatService = $chatService;
     }
 
+    /**
+     * @return Application|ResponseFactory|Factory|View|Response
+     */
     public function index()
     {
-        $generalRooms = Room::general()->get();
-        return view('index', compact('generalRooms'));
-    }
-
-    public function fetchMessages(\Illuminate\Http\Request $request)
-    {
         try {
-            $room = Room::find(simple_two_way_crypt($request->input('room_code'), 'd'));
-            $messages = $room->setRelation('messages', $room->messages()->latest()->where('id', '<', $request->input('query'))->with('user')->orderBy('id', 'DESC')->take(15)->get());
-            return $messages;
-        }catch (\Exception $exception){
-
+            $generalRooms = $this->chatService->generalRooms();
+            return view('index', compact('generalRooms'));
+        } catch (Exception $exception) {
+            Log::info($exception);
+            return response(['status', 'retrieving general rooms failed'], '503');
         }
     }
 
+    /**
+     * @param \Illuminate\Http\Request $request
+     * @return Application|ResponseFactory|Response|mixed
+     */
+    public function fetchMessages(\Illuminate\Http\Request $request)
+    {
+        try {
+            return $this->chatService->fetchRoomMessagesChunked($request->input('room_code'), $request->input('query'));
+        } catch (Exception $exception) {
+            Log::info($exception);
+            return response(['status', 'fetching messages failed'], '503');
+        }
+    }
+
+    /**
+     * @param MessageRequest $request
+     * @return Application|ResponseFactory|Response|void
+     */
     public function sendMessage(MessageRequest $request)
     {
         try {
             if (Request::ajax()) {
                 DB::beginTransaction();
-                $user = User::find(Auth::user()->id);
-                $room = Room::whereCode($request->input('room_code'))->first();
-                $message = $user->messages()->create([
-                    'message' => $request->input('message'),
-                    'room_id' => $room->id,
-                ]);
-                broadcast(new MessageSent($user, $message, $request->input('room_code')))->toOthers();
+                $this->chatService->sendMessage($request);
                 DB::commit();
-                return response(['status' => 'Message Sent!']);
+                return response(['status' => 'Message Sent!'], 200);
             } else {
                 Log::info('request was not a ajax');
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             DB::rollBack();
             Log::info($exception);
-            return response(['status' => 'Message Not Sent!']);
+            return response(['status' => 'Message Not Sent!'], 503);
         }
     }
 
-    # I know what is "route model binding" but this time it would not help :)
-    public function publicChat($room)
+    /**
+     * @param Room $room
+     * @return Application|Factory|View|RedirectResponse
+     */
+    public function publicChat(Room $room)
     {
         try {
-            $room = Room::find(simple_two_way_crypt($room, 'd'));
-            $generalRooms = Room::general()->get();
-            $messages = $room->setRelation('messages', $room->messages()->latest()->take(15)->get());
+            $generalRooms = $this->chatService->generalRooms();
+            $messages = $this->chatService->loadPublicRoom($room);
             return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room->code, 'room_name' => $room->name]);
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             Log::info($exception);
             return redirect()->back();
         }
-
     }
 
-    # I know what is "route model binding" but this time it would not help :)
+    /**
+     * @param $room
+     * @return Application|Factory|View|RedirectResponse
+     */
     public function privateChat($room)
     {
         try {
-            $privateRoom = Room::firstOrCreate(['code' => $room], ['name' => null, 'type' => 0]);
-            $generalRooms = Room::general()->get();
-            $messages = $privateRoom->load('messages');
+            $generalRooms = $this->chatService->generalRooms();
+            $messages = $this->chatService->loadPrivateRoom($room);
             return view('chatbox', ['rooms' => $generalRooms, 'messages' => $messages, 'room_code' => $room, 'room_name' => 'private']);
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             Log::info($exception);
             return redirect()->back();
         }
     }
 
+    /**
+     * @param \Illuminate\Http\Request $request
+     * @return array|Application|ResponseFactory|Response|void
+     */
     public function search(\Illuminate\Http\Request $request)
     {
         try {
             if (Request::ajax()) {
-                $query = $request->input('query');
-
-                $users = User::where('chat_name', 'like', '%' . $query . '%')->get(['id', 'chat_name']);
-                $mapped_users = collect($users)->map(function ($item) {
-                    return [
-                        'name' => $item->chat_name,
-                        'link' => route('room.private', ['room' => createPrivateRoomCode($item->id)]),
-                        'type' => 'user'
-                    ];
-                })->toArray();
-
-                $rooms = Room::general()->where('name', 'like', '%' . $query . '%')->get(['name', 'code']);
-                $mapped_rooms = collect($rooms)->map(function ($item) {
-                    return [
-                        'name' => $item->name,
-                        'link' => route('room.private', ['room' => $item->code]),
-                        'type' => 'room'
-                    ];
-                })->toArray();
-
-                return array_merge($mapped_users, $mapped_rooms);
-
+                return $this->chatService->chatSearch($request);
             } else {
                 Log::info('that was not a ajax request');
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             Log::info($exception);
+            return response(['status' => 'Search has been filed !'], 503);
         }
     }
-
 }
