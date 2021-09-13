@@ -1,0 +1,39 @@
+
+# This project is simple chat application which implemented by laravel framewrok based on php and using linux and docker infrastructure.
+
+# stacks were used in this project are :
+    laravel
+    mysql
+    bootstrap
+    jquery
+    pusher SDKs
+    docker -> sail version of laravel
+    linux
+
+# installation steps :
+    step 1: install docker on your system
+    step 2: install php and related packages
+    step 3: install composer ( php dependency manager )
+    step 4: install git
+    step 5: clone project form github according to this address  https://github.com/kbabolhavaeji/codeex-chatbox.git
+    step 6: at the root of project please run "composer install"
+    step 7: after complete compsoer progress installation run "sudo ./vendor/bin/sail up -d --build"
+    step 8: check for all docker services to be up and running using "sudo ./vendor/bin/sail ps" or "sudo docker-compose ps"
+    step 9: create .env file by make a copy of .env.example
+    step 10: then you should rum artisan migrate command "sudo ./vendor/bin/sail artisan migrate "
+    step 11: please seed the database to create predefined chat rooms
+    step 12: at the address bar look for localhost:80 and enjoy the chat
+
+# notice :
+    In this project I use pusher to manage the sending messages
+    in the .env file I sent my pusher channel to make it easy to use application for you
+    might be you would like to use your own pusher channel so you must register at pusher.com and make your own channel and then
+    update .env file with your pusher channel.
+
+
+Although by follow this structure application will run, I will be on call to help you to run the app if you face any problem.
+
+thanks
+
+
+

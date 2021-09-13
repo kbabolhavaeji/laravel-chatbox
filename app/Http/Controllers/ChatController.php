@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Request;
 class ChatController extends Controller
 {
 
+    //@todo implement queue and job
+
     protected $chatService;
 
     public function __construct(ChatService $chatService)
